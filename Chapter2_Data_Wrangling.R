@@ -2,7 +2,7 @@
 #Date: 13.11.2023
 #Katharina Ven
 
-#Data wrangling (max 5 points)
+#Data wrangling (max 5 points) 
 
 #reading txt table from URL:
 myfile <- read.table(url("https://www.mv.helsinki.fi/home/kvehkala/JYTmooc/JYTOPKYS2-data.txt"), sep = "\t", header = TRUE)
