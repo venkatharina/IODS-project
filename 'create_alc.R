@@ -2,7 +2,7 @@
 #Date: 13.11.2023
 #Katharina Ven
 
-#Data wrangling (max 5 points)
+#Data wrangling (max 5 points) 
 
 #reading the csv files into script:
 math <- read.csv("student-mat.csv", sep = ';')
