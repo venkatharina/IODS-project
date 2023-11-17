@@ -1,0 +1,18 @@
+### Week 3: Logistic regression
+
+```{r}
+date() 
+```
+
+## 1) Data wrangling exercises 
+R-Script:
+https://github.com/venkatharina/IODS-project/commit/60b22f079fb125121748e3bf2cc60f03460980a0 
+
+## 2) Analysis exercises
+
+```{r}
+data <- read.table(url("https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/alc.csv"), sep = ",", header = TRUE)
+
+
+
+```
