@@ -6,12 +6,223 @@ date()
 
 ## 1) Data wrangling exercises 
 R-Script:
-https://github.com/venkatharina/IODS-project/commit/60b22f079fb125121748e3bf2cc60f03460980a0 
+https://github.com/venkatharina/IODS-project/blob/Data/'create_alc.R
 
 ## 2) Analysis exercises
 
 ```{r}
+#reading table
+a <- read.table(url("https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/alc.csv"), sep = ",", header = TRUE)
+#looks same as I got from Data wrangling exercises
+dim(a) #dimension of table: 370 observations and 35 variables
+str(a) #structure of table
+colnames(a) #column names of table
+#There are 35 variables, with logical, integer, double and character vectors
+#Table predicts student performance in secondary education (high school) with alcohol consumption
+#The data attributes include student grades, demographic, social and school related features) and it was collected by using school reports and questionnaires
 
+#To study relation to low/high alcohol consumption:
+#I selected Fedu, studytime, romantic, absences
+#I think maybe parents higher education, high studytime would lead to low alcohol consumption
+#And romantic relationships and absences from school would high alcohol consumption
 
+##############################################################################
+
+c.names = c("Fedu","studytime","romantic","absences")
+par(mfrow = c(2,2))
+for(ii in 1:length(c.names)){
+barplot(table(a[,c.names[ii]]), main = c.names[ii], col="blue")
+}
+#all females are educated, many also highly
+#usually people study around 2h/week
+#majority are not in a romantic relationship
+#majority of absences are between 0-5h
+
+#alcohol consumption vs. female education 
+table(a$alc_use,a$Fedu)
+plot(table(a$alc_use,a$Fedu))
+#there does not seem to be very clear pattern
+#overall people seem to drink only 1 dose/week, no matter on mothers education
+#maybe at very high 5 doses/week, education of the mother is 1-2
+
+#alcohol consumption vs. studytime
+table(a$alc_use,a$studytime)
+plot(table(a$alc_use,a$studytime))
+#people who study less (1h), seem to drink more in high dosages (3.5-5)
+#people who study more (4h), seem to drink less overall
+#average people study 2h/week and drink 1 dose
+
+#alcohol consumption vs. romantic
+table(a$alc_use,a$romantic)
+plot(table(a$alc_use,a$romantic))
+#it seems that overall majority drinks only 1 dose/week
+#number of people in a romantic relationship seem to drink less, 
+#until we get into very high doses (4.5-5)
+
+#alcohol consumption vs. absences
+table(a$alc_use,a$absences)
+plot(table(a$alc_use,a$absences))
+#people who drink less (1 dose/week), seem to be have less absences
+#people who drink more (4-5 doses/week), seem to have more absences
+#majority of people still drink less as said before
+
+#previously I predicted that high mothers education and high studytime would lead to less drinking
+#seems by estimation that mothers education does not seem to have such a huge effect
+#but high studytime seem to lead to less alcohol consumption
+#also
+#I predicted that romantic relationships and high amount of absences leads to high alcohol consumption
+#seem romantic relationships effect the opposite way, to less alcohol
+#low absences lead to low alcohol consumption, high absences to high alcohol consumption
+
+##############################################################################
+
+#doing logistic regression to high_use (high alcohol consumption)
+#where Fedu, studytime, absences and romantic status are predictors
+
+summary(a$high_use)#high_use FALSE 259, TRUE 111
+table(as.numeric(a$high_use),a$high_use) #FALSE 0, TRUE 1
+#high_use outcome variable --> modeling TRUE answer
+
+m=glm(high_use ~ Fedu + studytime + absences + romantic, data=a)
+summary(m)
+#Fedu and romanticYES does not seem to be significant in this model
+##Fedu would decrease alcohol consumption but not significantly
+##romanticYESwould decrease alcohol consumption but not significantly
+#studytime seems to decrease probability for high alcohol consumption
+#abcences seem to increase probability for high alcohol consumption
+
+#I predicted: mother education and studytime would decrease alcohol consumption
+#And: romantic relationship and absences would increase alcohol consumption
+#Mothers education and studytime will predict decreased alcohol consumption, but mothers eduction does not do that significantly
+#Romantic relationships do not increase alcohol consumption, it decreases it, but not significantly
+#Absences do increase high alcohol consumption as I predicted in the beginning
+
+##############################################################################
+
+#creating new logistic regression model with significant variables
+#high_use ~ studytime + absences significantly
+mm=glm(high_use ~ studytime + absences, data=a)
+summary(mm)
+
+#creating new table with probabilities and predictions of model
+library(dplyr)
+alc <- mutate(a, probability = predict(mm, type = "response"))
+alc <- mutate(alc, prediction = probability > 0.5)
+
+#true values of high alcohol use
+actual <- summary(alc$high_use)
+#predicted values of high alcohol use with studytime and absences
+prediction <- summary(alc$prediction)
+act_pred <- cbind(actual,prediction)
+act_pred
+#actual: there are 259 who have low alcohol consumption, as 111 have high
+#model: there are 349 who have low alcohol consumption, as 21 have high
+
+#plotting the actual alcohol consumption rates and probability rates:
+plot(alc$alc_use)
+plot(alc$probability) #plots seems to go down to page
+#it seem the model underestimates the high alcohol consumption
+
+#2x2 crosstabular of actual values and predictions
+table(alc$high_use,alc$prediction) 
+#cross-tabulation shows quite many TRUE-FALSE in prediction
+#not very good fitting to the model
+
+# define a loss function (average prediction error)
+loss_func <- function(class, prob) {
+  n_wrong <- abs(class - prob) > 0.5
+  mean(n_wrong)
+}
+
+# K-fold cross-validation
+library(boot)
+cv <- cv.glm(data = alc, cost = loss_func, glmfit = mm, K = nrow(alc))
+# average number of wrong predictions in the cross validation
+cv$delta[1] #model gives wrong predictions: 0.2864865 = ~29%
+
+#guessing predictions with studytime=4, absences=0:
+predict(mm, type = "response",
+        newdata = data.frame(studytime = 4, absences = 0))
+#model prediction:0.02218847 = 22%
+#when studytime=4, absences=0; alcohol consumption values 1.0, 2.0, 1.0 and 1.5 (scale:1-5)
+(((1+2+1+1.5)/4)/5) #average and normalised value
+#real: 0.275 = 28%
+#model quite right with these settings (real:FALSE, prediction:FALSE)
+
+#guessing predictions with studytime=1, absences=27:
+predict(mm, type = "response",
+        newdata = data.frame(studytime = 1, absences = 27))
+#model prediction:0.7833464  = 78%
+#when studytime=1, absences=27; alcohol consumption value 2.5 (scale:1-5)
+(2.5/5) #average and normalised value
+#real: 0.5 = 50%
+#model okay-ish with these settings (real:TRUE, prediction:TRUE)
+
+#the model works to some extend okay, but there is a lot of error
+#model would need more predictors to make it better
+
+##############################################################################
+
+#10-fold cross-validation
+cv10 <- cv.glm(data = alc, cost = loss_func, glmfit = mm, K = 10)
+# average number of wrong predictions in the cross validation
+cv10$delta[1] #model gives wrong predictions: 0.2837838 = ~28%
+#Model does not get better with 10-fold cross-validation
+#This set seems to have higher prediction error than in the Exercise3 (26%)
+#With differ/more predictors such model could be perhaps found
+
+##############################################################################
+
+#making a new logistic regression model with lots of predictors:
+m2=glm(high_use ~ age+traveltime+studytime+famrel+freetime+goout+health+failures+absences
+         , data=a, family = "binomial")
+summary(m2)
+
+#counting average number of wrong predictions
+cv2 <- cv.glm(data = a, cost = loss_func, glmfit = m2, K = nrow(a))
+cv2$delta[1] #0.2459459 average number of wrong predictions in the cross validation
+
+#adding predictions and probability to the table:
+alc2 <- mutate(a, probability = predict(m2, type = "response"))
+alc2 <- mutate(alc2, prediction = probability > 0.5)
+
+#seeing actual values and predicted ones in one table
+prediction2 <- summary(alc2$prediction)
+act_pred2 <- cbind(actual,prediction2)
+act_pred2
+#model2 (m2) is getting closer to the real data than model mm
+
+#2x2 crosstabular of actual values and predictions:
+table(alc2$high_use,alc2$prediction)
+#There are more FALSE-TRUE, but also way more TRUE-FALSE
+#Overall the model seems to be better
+
+#adjusting the model according to significant predictors:
+m3=glm(high_use ~ traveltime+studytime+famrel+goout+health+absences
+         , data=a, family = "binomial")
+summary(m3)
+
+#counting average number of wrong predictions:
+cv3 <- cv.glm(data = a, cost = loss_func, glmfit = m3, K = nrow(a))
+cv33 <- cv3$delta[1] #0.2378378 average number of wrong predictions in the cross validation
+
+#adding predictions and probability to the table:
+alc3 <- mutate(a, probability = predict(m3, type = "response"))
+alc3 <- mutate(alc3, prediction = probability > 0.5)
+
+#seeing actual values and predicted ones in one table:
+prediction3 <- summary(alc3$prediction)
+act_pred3 <- cbind(actual,prediction3)
+act_pred3
+#model3 (m3) is getting even closer to the real data (predictability better)
+
+#2x2 crosstabular of actual values and predictions:
+table(alc3$high_use,alc3$prediction) 
+#There are more FALSE-TRUE, but also way more TRUE-FALSE
+#Overall the model seems to be better
+
+#In both models where there are more predictors/more significant predictors , the prediction model gets better (error smaller and model fit better with cross tabulars)
+
+#I did not know how to make a graph to show both training and testing errors by the number of predictors in the model
 
 ```
