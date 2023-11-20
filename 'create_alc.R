@@ -1,7 +1,7 @@
 #Chapter 3: Logistic regression
 #Date: 13.11.2023
 #Katharina Ven   
-
+ 
 #Data wrangling (max 5 points) 
 
 #reading the csv files into script:
