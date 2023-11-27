@@ -36,7 +36,7 @@ output:
 ***
 # Chapter 4 - Clustering and classification
 
-```{r child = "chapter4.Rmd"}  
+```{r child = "chapter4.Rmd"}   
 # This will include Chapter 4 (that is updated in its own file) in the document. 
 ```
 
