@@ -1,0 +1,89 @@
+### Week 5: Dimensionality reduction techniques
+
+```{r}
+date() 
+```
+
+## 1) Data wrangling exercises 
+R-Script:
+https://github.com/venkatharina/IODS-project/blob/Data/create_human.R
+
+## 2) Analysis exercises
+
+```{r}
+library(dplyr)
+library(readr)
+library(corrplot)
+library(tibble)
+library(GGally)
+
+#reading data in
+human <- read_csv("https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/human2.csv")
+
+#moving the country names to rownames
+human_ <- column_to_rownames(human, "Country")
+
+#visualisation of data:
+ggpairs(human_, progress = FALSE)
+#summary of data:
+summary(human_)
+#correlation matrix and its visual representation:
+cor(human_)
+corrplot(cor(human_))
+#description of data:
+#Seems that Perli.F and LaboFM has least correlations with other variables
+#Edu.FM2 seem to positively correlate with Life.Exp, Edu.Exp and GNI and 
+#negatively correlate with Mat.Mor and Ado.Birth
+#Life.Exp positively correlates with Edu2.FM, Edu.Exp and GNI and 
+#negatively correlates to Mat.Mor and Ado.Birth
+#Overall higher education seems to decrease adolescent birth rate and 
+#maternal mortality
+
+#Principal component analysis (PCA) with biplot
+pca_human <- prcomp(human_)
+pca_human
+biplot(pca_human, choices = 1:2)
+
+#Principal component analysis (PCA) with biplot with standardized data
+human_std <- scale(human_)
+pca_human2 <- prcomp(human_std)
+pca_human2
+biplot(pca_human2, choices = 1:2)
+#standardized model is much more readable than non-standardized
+#non-standardized:
+#GNI seems higher in countries like Singapore, Norway
+#From the rest, it is hard to find out
+
+#standardized:
+#If we see from the center of the graph:
+#Up we seem more females in parliament (Parli.F) and Labour force of females (Labo.FM) (counties like Bolivia, Tanzania)
+#Left we see more Education expectation, GNI, educated females, life expectancy (countries like Singapore, Ireland, Canada)
+#On right we see maternity mortality and adolescents birth rates (countries like Sierra Leone, Gambia, Burkina Faso)
+
+#Personal opinion:
+#In more female educational countries, GNI and life expectancy seems higher and adolescent birth rate and maternal mortality rates are lower
+#And males and females have equal labor force, and equal parliament
+#Many Western Countries seem to be in this group
+
+#300 individuals were asked how they drink tea (18 questions) and what are their product's perception (12 questions). 
+#In addition, some personal details were asked (4 questions).
+#loading data:
+tea <- read.csv("https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/tea.csv", stringsAsFactors = TRUE)
+#visualisation of data:
+view(tea)
+str(tea)
+dim(tea) #300rows and 36variables
+#pivot_longer(tea, cols = everything()) %>% 
+#  ggplot(aes(value)) + facet_wrap("name", scales = "free")
+#MCA analysis:
+#library("FactoMineR")
+#install.packages("FactoMineR")
+
+#URL: 'https://cran.rstudio.com/src/contrib/FactoMineR_2.9.tar.gz'
+
+#install.packages(
+#  "https://cran.r-project.org/src/contrib/Archive/FactoMineR/FactoMineR_2.7.tar.gz", 
+#  repos = NULL, type = "source"
+#)
+
+
