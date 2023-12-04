@@ -56,7 +56,7 @@ gii3 <- mutate(gii2, LaboFM = (Labo.F / Labo.M))
 hd_gii3 <- inner_join(hd, gii3, by = 'Country')
 
 #calling data as 'human'
-human <- hd_gii3
+human <- hd_gii3 
 
 library(readr)
 #saving the data as 'human.csv'
