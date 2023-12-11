@@ -41,10 +41,16 @@ output:
 ```
 
 ***
-# Chapter 5 - Clustering and classification
+# Chapter 5 - Dimensionality reduction techniques
 
-```{r child = "chapter55.Rmd"}   
-# This will include Chapter 5 (that is updated in its own file) in the document. 
+```{r child = "chapter55.Rmd"} 
+# This will include Chapter 4 (that is updated in its own file) in the document.
 ```
 
+***
+# Chapter 6 - Analysis of longitudinal data
+
+```{r child = "chapter6.Rmd"} 
+# This will include Chapter 4 (that is updated in its own file) in the document.
+```
 (more chapters to be added similarly as we proceed with the course!)
