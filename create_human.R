@@ -102,3 +102,5 @@ dim(human_) #dimensions with 156 rows and 9 variables
 library(readr)
 #saving the data as 'human.csv'
 write_csv(x=human_, 'human.csv', col_names = TRUE)
+
+

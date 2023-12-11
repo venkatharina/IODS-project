@@ -1,0 +1,176 @@
+### Week 6: Analysis of longitudinal data
+```{r}
+date() 
+```
+
+## 1) Data wrangling exercises 
+R-Script: 
+CHANGE!!!!
+
+## 2) Analysis exercises
+```{r}
+################ PART I - rats ################
+library(dplyr); library(tidyr); library(lme4); library(ggplot2); library(readr)
+#loading data in (from data wrangling)
+rats_long <- read_csv("ratslong.csv")
+#structure of the rats-data
+str(rats_long)
+
+#changing variable category to factor again
+rats_long$ID <- factor(rats_long$ID)
+rats_long$Group <- factor(rats_long$Group)
+rats_long$wd <- factor(rats_long$wd)
+#structure and glimpse of data
+str(rats_long)
+glimpse(rats_long)
+#in rats: Body Weights of Rats Recorded Over a 9-Week Period with different diets,
+#diet options from 1-3
+
+#plotting longitudinal data rats_long:
+ggplot(rats_long, aes(x = Time, y = weight, linetype=ID)) + 
+  geom_line() + 
+  scale_linetype_manual(values = rep(1:10, times=4)) + 
+  theme(legend.position = "none") + 
+  scale_y_continuous(limits = c(min(rats_long$weight), max(rats_long$weight))) + 
+  facet_grid(. ~ Group, labeller = label_both)
+#Weight: 
+#Group 1 has lowest weight and weight gain in very small when compared to other groups. 
+#In group 2, starting weight is between group 1 and group 3, and there seem to be individual with very high starting weight than others in the group. Weight gain is modest in this study group. 
+#In group 3, starting weight is the highest among the three groups as also the weight gain.
+
+#standardized weight
+std_rats_long <- rats_long %>% 
+  group_by(Time) %>% 
+  mutate(stdweight = (weight-mean(weight))/sd(weight)) %>% 
+  ungroup()
+
+#plotting longitudinal data rats_long:
+ggplot(std_rats_long, aes(x = Time, y = weight, linetype=ID)) + 
+  geom_line() + 
+  scale_linetype_manual(values = rep(1:10, times=4)) + 
+  theme(legend.position = "none") + 
+  scale_y_continuous(limits = c(min(std_rats_long$weight), max(std_rats_long$weight))) + 
+  facet_grid(. ~ Group, labeller = label_both)
+#Standardized weight: 
+#After weight standardized data, weight gain seem milder. 
+
+#Summary data: by Group and Time (mean and SEM error of weight) 
+summary_rats <- std_rats_long %>% 
+  group_by(Group, Time) %>% 
+  summarise(mean = mean(weight), 
+  se = (sd(weight)/sqrt(length(weight)))) %>% 
+  ungroup()
+#Plotting summary data
+ggplot(summary_rats, aes(x=Time, y=mean, linetype=Group, shape=Group)) +
+  geom_line() +
+  scale_linetype_manual(values = c(1,2,3)) +
+  geom_point(size=3) +
+  scale_shape_manual(values = c(1,2,3)) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se, linetype="1"), width=0.3) +
+  theme(legend.position = c(0.8,0.4)) +
+  scale_y_continuous(name = "mean(weight) +/- se(weight)")
+#Interpret:
+#Group 1 weight has the lowest weight, and weight gain seem quite slow/mild. The group seem quite heterogenous, SEM error really small. 
+#Group 2 is in between groups 1 & 3 in weight and seem to gain weight better than group 1, and similarly to group 3. Error bars in this group seem high. 
+#Group 3 has highest starting weight and seem to gain weight maybe slightly slower than group 2. Error bars seem okay.
+
+#summary data for filtered (week > 1)
+summary_rats2 <- std_rats_long %>% 
+  filter(Time > 1) %>%
+  group_by(Group, ID) %>% 
+  summarise(mean = mean(weight), 
+  se = (sd(weight)/sqrt(length(weight)))) %>% 
+  ungroup()
+#plotting filtered (boxplot)
+ggplot(summary_rats2, aes(x=Group, y=mean)) + 
+  geom_boxplot() + 
+  stat_summary(fun = "mean", geom = "point", shape=23, size=2.5, fill = "white") + 
+  scale_y_continuous(name = "mean(weight), days 8-64")
+#interpret:
+#Error bars in group 2 high; outlier in one subject?
+
+#Removing the outlier from group 2
+summary_rats3 <- subset(summary_rats2, summary_rats2$mean<550)
+#Plotting again:
+ggplot(summary_rats3, aes(x=Group, y=mean)) + 
+  geom_boxplot() + 
+  stat_summary(fun = "mean", geom = "point", shape=23, size=2.5, fill = "white") + 
+  scale_y_continuous(name = "mean(weight), days 8-64")
+#Seems much better after removing outlier from group 2
+#Now we can see that group 2 & 3 actually have quite different weight gain
+#Previously it seemed they would be similar, but after removing outlier from group 2
+#we can see you weight gain is higher in group 3
+
+#performing t-test for group1&2, 1&3 and 2&3:
+summary_rats12 <- subset(summary_rats3, summary_rats3$Group==1 | summary_rats3$Group==2)
+t.test(mean ~ Group, data = summary_rats12, var.equal=TRUE) #p-value = 1.094e-09 ***
+summary_rats13 <- subset(summary_rats3, summary_rats3$Group==1 | summary_rats3$Group==3)
+t.test(mean ~ Group, data = summary_rats13, var.equal=TRUE) #p-value = 8.345e-11 ***
+summary_rats23 <- subset(summary_rats3, summary_rats3$Group==2 | summary_rats3$Group==3)
+t.test(mean ~ Group, data = summary_rats23, var.equal=TRUE) #p-value = 0.002446 **
+#All of the groups seem to have significant difference p < 0.05 in weight gain
+
+# Adding baseline from the original data as a new variable to the summary data
+baseline <- subset(rats_long, rats_long$Time==1)
+base_rats <- summary_rats2 %>%
+  mutate(baseline = baseline$Time)
+# Fit the linear model with the mean as the response 
+fit <- lm(mean ~ baseline + Group, data = base_rats)
+anova(fit) #p 2.679e-08 ***
+#All of the groups seem to have even more significant differences p 2.679e-08 ***
+#when baseline (base weight) is taken into account in weight gain
+
+################ PART II - BPRS ################
+
+#loading data in (from data wrangling)
+BPRS_long <- read_csv("BPRSlong.csv")
+#changing variable category to factor again (ID and Group)
+BPRS_long$treatment <- factor(BPRS_long$treatment)
+BPRS_long$weeks <- factor(BPRS_long$weeks)
+BPRS_long$subject <- factor(BPRS_long$subject)
+#structure of the BPRS-data
+str(BPRS_long)
+dim(BPRS_long) #360rows and 5variables
+glimpse(BPRS_long)
+#in BPRS: are 40 male subjects were randomly assigned to one of two treatment groups 
+#and each subject was rated on the brief psychiatric rating scale (BPRS) 
+#measured before treatment began (week 0) and then at weekly intervals for 
+#eight weeks. The BPRS assesses the level of 18 symptom constructs such as 
+#hostility, suspiciousness, hallucinations and grandiosity; each of these is 
+#rated from one (not present) to seven (extremely severe).
+
+#linear regression model (lm):
+BPRS_lm <- lm(BPRS ~ week + treatment, data = BPRS_long)
+summary(BPRS_lm)
+#week is significant (p <2e-16 ***) variable to BPRS but not treatment 2
+#trying other models below:
+
+#random intercept model (lmer):
+BPRS_ref <- lmer(BPRS~week+treatment + (1|subject), data=BPRS_long, REML=FALSE)
+summary(BPRS_ref)
+#random intercept (lmer) and random slope model (subject):
+BPRS_ref2 <- lmer(BPRS~week+treatment + (week|subject), data = BPRS_long, REML=FALSE)
+summary(BPRS_ref2)
+#random intercept (lmer) and random slope model + interaction:
+BPRS_ref3 <- lmer(BPRS~week+treatment + (week|subject) + (week|treatment), data=BPRS_long, REML=FALSE)
+summary(BPRS_ref3)
+
+#anova from models:
+anova(BPRS_ref, BPRS_ref2)
+anova(BPRS_ref2, BPRS_ref3)
+#model ref2 seems to be the best model with p:0.02636 *
+
+#doing/adding fitting values to BPRS_long:
+fitted <- fitted(BPRS_ref3)
+BPRS_long_fitted <- mutate(BPRS_long, fitted=fitted)
+
+#plotting data:
+ggplot(BPRS_long, aes(x=week, y=BPRS, linetype=subject, colour=treatment)) + 
+  geom_line() + 
+  scale_linetype_manual(values=rep(1:10, times=4), guide=FALSE)
+#plotting fitted values of data:
+ggplot(BPRS_long_fitted, aes(x=week, y=fitted, linetype=subject, colour=treatment)) + 
+  geom_line() + 
+  scale_linetype_manual(values=rep(1:10, times=4), guide=FALSE)
+#from fitted values, we can see that treatment 1 decreases BPRS more
+```
